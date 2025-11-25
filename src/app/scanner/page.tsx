@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, Activity, Search } from 'lucide-react';
-import { getMarkets, Market } from '@/lib/polymarket';
+import { Market } from '@/lib/polymarket';
 import MarketCard from '@/components/MarketCard';
 import SkeletonCard from '@/components/SkeletonCard';
 
@@ -17,12 +17,10 @@ export default function ScannerPage() {
             setLoading(true);
             setError(null);
             try {
-                const data = await getMarkets({
-                    limit: 12,
-                    order: 'DESC',
-                    sort: filter === 'trending' ? 'volume' : 'createdAt',
-                    active: true,
-                });
+                // Use API route instead of direct call
+                const sort = filter === 'trending' ? 'volume' : 'createdAt';
+                const response = await fetch(`/api/markets?limit=12&order=DESC&sort=${sort}&active=true`);
+                const data = await response.json();
                 setMarkets(data);
             } catch (error) {
                 console.error('Failed to fetch markets', error);

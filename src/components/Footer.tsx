@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { BarChart2, Github, Mail } from 'lucide-react';
 
@@ -5,7 +7,7 @@ export default function Footer() {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 mt-20">
+        <footer className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700">
             <div className="container mx-auto px-6 py-12">
                 <div className="max-w-7xl mx-auto">
                     <div className="grid md:grid-cols-4 gap-8">

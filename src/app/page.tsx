@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { BarChart2, Shield, Zap, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { getMarkets, Market } from '@/lib/polymarket';
+import { Market } from '@/lib/polymarket';
 import MarketCard from '@/components/MarketCard';
 import SkeletonCard from '@/components/SkeletonCard';
 
@@ -20,22 +20,24 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const markets = await getMarkets({ limit: 6, active: true, sort: 'volume', order: 'DESC' });
+        // Use API route instead of direct call
+        const response = await fetch('/api/markets?limit=6&active=true&sort=volume&order=DESC');
+        const markets = await response.json();
 
         if (markets.length > 0) {
-          const totalVolume = markets.reduce((sum, m) => sum + parseFloat(m.volume || '0'), 0);
+          const totalVolume = markets.reduce((sum: number, m: Market) => sum + parseFloat(m.volume || '0'), 0);
           const volumeInMillions = (totalVolume / 1000000).toFixed(0);
 
           setStats({
             volume: `$${volumeInMillions}M`,
-            markets: `${markets.length}`,
-            traders: '100K+',
+            markets: markets.length.toString(),
+            traders: '10K+',
           });
 
-          setTrendingMarkets(markets.slice(0, 3));
+          setTrendingMarkets(markets);
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        console.error('Failed to fetch markets:', error);
       } finally {
         setLoading(false);
       }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Wallet, DollarSign } from 'lucide-react';
-import { getGlobalActivity } from '@/lib/polymarket';
 
 interface WhaleData {
     id: string;
@@ -26,7 +25,9 @@ export default function WhalesPage() {
             setError(null);
             try {
                 console.log('Fetching whale activity...');
-                const data = await getGlobalActivity(50);
+                // Use API route instead of direct call
+                const response = await fetch('/api/whales?limit=50');
+                const data = await response.json();
                 console.log('Received activity data:', data.length, 'items');
 
                 if (!data || data.length === 0) {
@@ -173,8 +174,8 @@ export default function WhalesPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${whale.action === 'BUY'
-                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                                                         }`}>
                                                         {whale.action}
                                                     </span>
