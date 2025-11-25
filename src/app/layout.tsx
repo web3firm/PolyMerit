@@ -15,9 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen font-sans antialiased">
         <NavBar />
-        <main className="min-h-screen">
+        <main className="min-h-[calc(100vh-160px)]">
           {children}
         </main>
         <Footer />

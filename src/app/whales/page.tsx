@@ -36,11 +36,19 @@ export default function WhalesPage() {
                 }
 
                 const mapped: WhaleData[] = data.map((item: any, index: number) => {
-                    const address = item.maker_address || item.user || item.address || `0x${Math.random().toString(16).substr(2, 40)}`;
-                    const shortAddress = address.length > 10 ? address.slice(0, 6) + '...' + address.slice(-4) : address;
+                    const address =
+                        item.maker_address ||
+                        item.user_address ||
+                        item.address ||
+                        `0x${Math.random().toString(16).slice(2, 42)}`;
 
-                    const size = parseFloat(item.size || item.amount || '0');
-                    const price = parseFloat(item.price || '0.5');
+                    const shortAddress =
+                        address.length > 10
+                            ? `${address.slice(0, 6)}...${address.slice(-4)}`
+                            : address;
+
+                    const size = parseFloat(item.size || item.amount || '0') || 0;
+                    const price = parseFloat(item.price || '0.5') || 0.5;
                     const value = size * price;
 
                     return {
@@ -48,9 +56,11 @@ export default function WhalesPage() {
                         address: shortAddress,
                         fullAddress: address,
                         lastTrade: item.market_slug || item.market || item.asset_id || 'Unknown Market',
-                        time: item.timestamp ? new Date(item.timestamp * 1000).toLocaleTimeString() : new Date().toLocaleTimeString(),
+                        time: item.timestamp
+                            ? new Date(item.timestamp * 1000).toLocaleTimeString()
+                            : new Date().toLocaleTimeString(),
                         action: item.side || (Math.random() > 0.5 ? 'BUY' : 'SELL'),
-                        value: value,
+                        value,
                         size: size.toFixed(2),
                     };
                 });
@@ -162,8 +172,8 @@ export default function WhalesPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${whale.action === 'BUY'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700'
                                                     }`}>
                                                     {whale.action}
                                                 </span>

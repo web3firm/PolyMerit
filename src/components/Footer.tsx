@@ -46,20 +46,21 @@ export default function Footer() {
                         <h3 className="font-semibold text-gray-900 mb-4">Company</h3>
                         <ul className="space-y-3">
                             <li>
-                                <a href="#" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
+                                <Link href="/contact" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
+                                    Contact
+                                </Link>
+                            </li>
+                            <li>
+                                <a href="/about" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
                                     About
                                 </a>
                             </li>
                             <li>
-                                <a href="#" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
+                                <a href="/blog" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
                                     Blog
                                 </a>
                             </li>
-                            <li>
-                                <a href="#" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">
-                                    Careers
-                                </a>
-                            </li>
+
                         </ul>
                     </div>
 
@@ -67,18 +68,8 @@ export default function Footer() {
                     <div>
                         <h3 className="font-semibold text-gray-900 mb-4">Connect</h3>
                         <div className="flex gap-3">
-                            <a
-                                href="#"
-                                className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-purple-600 hover:text-white transition-colors"
-                            >
-                                <Twitter size={18} />
-                            </a>
-                            <a
-                                href="#"
-                                className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-purple-600 hover:text-white transition-colors"
-                            >
-                                <Github size={18} />
-                            </a>
+                            
+
                             <a
                                 href="#"
                                 className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-purple-600 hover:text-white transition-colors"
@@ -92,7 +83,7 @@ export default function Footer() {
                 {/* Bottom */}
                 <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-gray-600 text-sm">
-                        © 2024 PolyMerit. All rights reserved.
+                        © 2025 PolyMerit. All rights reserved.
                     </p>
                     <div className="flex gap-6">
                         <a href="#" className="text-gray-600 hover:text-purple-600 text-sm transition-colors">

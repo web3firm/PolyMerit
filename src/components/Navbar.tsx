@@ -33,8 +33,8 @@ export default function NavBar() {
                                 key={link.href}
                                 href={link.href}
                                 className={`text-sm font-medium transition-colors ${pathname === link.href
-                                        ? 'text-purple-600'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                    ? 'text-purple-600'
+                                    : 'text-gray-600 hover:text-gray-900'
                                     }`}
                             >
                                 {link.name}
