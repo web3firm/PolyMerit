@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { getMarkets, Market } from '@/lib/polymarket';
 import MarketCard from '@/components/MarketCard';
+import SkeletonCard from '@/components/SkeletonCard';
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -47,18 +48,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative py-20 md:py-32">
         <div className="container mx-auto px-6 text-center">
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-block mb-8"
-          >
-            <div className="badge">
-              <span className="w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
-              <span>AI-Powered Market Intelligence</span>
-            </div>
-          </motion.div>
+
 
           {/* Main Headline */}
           <motion.h1
@@ -112,7 +102,7 @@ export default function Home() {
             {loading ? (
               <div className="grid md:grid-cols-3 gap-6">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="card h-48 animate-pulse bg-gray-100" />
+                  <SkeletonCard key={i} />
                 ))}
               </div>
             ) : (

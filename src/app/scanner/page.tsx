@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Activity, Search } from 'lucide-react';
 import { getMarkets, Market } from '@/lib/polymarket';
 import MarketCard from '@/components/MarketCard';
+import SkeletonCard from '@/components/SkeletonCard';
 
 export default function ScannerPage() {
     const [markets, setMarkets] = useState<Market[]>([]);
@@ -53,8 +54,8 @@ export default function ScannerPage() {
                             <button
                                 onClick={() => setFilter('trending')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'trending'
-                                        ? 'bg-purple-600 text-white shadow-md'
-                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
+                                    ? 'bg-purple-600 text-white shadow-md'
+                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
                                     }`}
                             >
                                 <TrendingUp size={18} className="inline mr-2" />
@@ -63,8 +64,8 @@ export default function ScannerPage() {
                             <button
                                 onClick={() => setFilter('new')}
                                 className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'new'
-                                        ? 'bg-purple-600 text-white shadow-md'
-                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
+                                    ? 'bg-purple-600 text-white shadow-md'
+                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
                                     }`}
                             >
                                 <Activity size={18} className="inline mr-2" />
@@ -95,7 +96,7 @@ export default function ScannerPage() {
                     {loading ? (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[...Array(6)].map((_, i) => (
-                                <div key={i} className="card h-64 animate-pulse bg-gray-100" />
+                                <SkeletonCard key={i} />
                             ))}
                         </div>
                     ) : markets.length === 0 ? (
