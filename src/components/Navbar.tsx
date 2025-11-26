@@ -19,12 +19,12 @@ export default function NavBar() {
     ];
 
     return (
-        <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
+        <nav className="sticky top-0 z-50 bg-primary border-b border-primary shadow-sm">
             <div className="container mx-auto px-6">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white">
-                        <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                    <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgb(var(--accent-primary))' }}>
                             <BarChart2 size={20} className="text-white" />
                         </div>
                         <span>PolyMerit</span>
@@ -36,10 +36,9 @@ export default function NavBar() {
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className={`text-sm font-medium transition-colors ${pathname === link.href
-                                        ? 'text-purple-600 dark:text-purple-400'
-                                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
+                                className={`text-sm font-medium transition-colors nav-link ${
+                                    pathname === link.href ? 'active' : ''
+                                }`}
                             >
                                 {link.name}
                             </Link>
@@ -47,16 +46,16 @@ export default function NavBar() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Hamburger Button (always visible on right) */}
+                        {/* Hamburger Button */}
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                            className="p-2 rounded-lg transition-colors btn-ghost"
                             aria-label="Toggle menu"
                         >
                             {isMenuOpen ? (
-                                <X size={24} className="text-gray-900 dark:text-white" />
+                                <X size={24} className="text-primary" />
                             ) : (
-                                <Menu size={24} className="text-gray-900 dark:text-white" />
+                                <Menu size={24} className="text-primary" />
                             )}
                         </button>
                     </div>
@@ -65,7 +64,7 @@ export default function NavBar() {
 
             {/* Dropdown Menu */}
             {isMenuOpen && (
-                <div className="border-t border-gray-200/50 dark:border-gray-700/50 backdrop-blur-md">
+                <div className="border-t border-primary bg-primary">
                     <div className="container mx-auto px-6 py-4">
                         {/* Navigation Links (mobile only) */}
                         <div className="lg:hidden flex flex-col space-y-4 mb-6">
@@ -74,36 +73,41 @@ export default function NavBar() {
                                     key={link.href}
                                     href={link.href}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className={`text-base font-medium transition-colors ${pathname === link.href
-                                            ? 'text-purple-600 dark:text-purple-400'
-                                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                                        }`}
+                                    className={`text-base font-medium transition-colors nav-link ${
+                                        pathname === link.href ? 'active' : ''
+                                    }`}
                                 >
                                     {link.name}
                                 </Link>
                             ))}
                         </div>
 
-                        {/* Theme Toggle (always visible in dropdown) */}
-                        <div className="flex items-center justify-between py-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                        {/* Theme Toggle */}
+                        <div className="flex items-center justify-between py-4 border-t border-primary">
                             <div className="flex items-center gap-2">
                                 {theme === 'light' ? (
-                                    <Sun size={18} className="text-gray-700 dark:text-gray-300" />
+                                    <Sun size={18} className="text-secondary" />
                                 ) : (
-                                    <Moon size={18} className="text-gray-700 dark:text-gray-300" />
+                                    <Moon size={18} className="text-secondary" />
                                 )}
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span className="text-sm font-medium text-secondary">
                                     {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
                                 </span>
                             </div>
                             <button
                                 onClick={toggleTheme}
-                                className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 bg-gray-200 dark:bg-purple-600"
+                                className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                                style={{ 
+                                    background: theme === 'dark' ? 'rgb(var(--accent-primary))' : 'rgb(var(--border-secondary))',
+                                    boxShadow: theme === 'dark' ? '0 0 0 2px rgba(var(--accent-primary) / 0.2)' : 'none'
+                                }}
                                 aria-label="Toggle theme"
                             >
                                 <span
-                                    className={`inline-block w-4 h-4 transform transition-transform bg-white rounded-full ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
+                                    className="inline-block w-4 h-4 transform transition-transform bg-white rounded-full shadow-sm"
+                                    style={{
+                                        transform: theme === 'dark' ? 'translateX(24px)' : 'translateX(4px)'
+                                    }}
                                 />
                                 <span className="sr-only">Toggle theme</span>
                             </button>

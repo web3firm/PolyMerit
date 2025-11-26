@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, DollarSign, Filter, RefreshCw } from 'lucide-react';
+import { Wallet, DollarSign, Filter, RefreshCw, Star, ExternalLink, TrendingUp, BarChart3 } from 'lucide-react';
 import { Trade } from '@/lib/polymarket';
+import Link from 'next/link';
 
 export default function WhalesPage() {
     const [trades, setTrades] = useState<Trade[]>([]);
@@ -11,6 +12,28 @@ export default function WhalesPage() {
     const [filterSide, setFilterSide] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
     const [minSize, setMinSize] = useState<number>(100);
     const [autoRefresh, setAutoRefresh] = useState(false);
+    const [trackedWallets, setTrackedWallets] = useState<Set<string>>(new Set());
+    const [showOnlyTracked, setShowOnlyTracked] = useState(false);
+
+    // Load tracked wallets from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('trackedWallets');
+        if (saved) {
+            setTrackedWallets(new Set(JSON.parse(saved)));
+        }
+    }, []);
+
+    // Save tracked wallets to localStorage
+    const toggleTrackWallet = (address: string) => {
+        const newTracked = new Set(trackedWallets);
+        if (newTracked.has(address)) {
+            newTracked.delete(address);
+        } else {
+            newTracked.add(address);
+        }
+        setTrackedWallets(newTracked);
+        localStorage.setItem('trackedWallets', JSON.stringify(Array.from(newTracked)));
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -30,7 +53,8 @@ export default function WhalesPage() {
                 const size = parseFloat(trade.size || '0');
                 const matchesSide = filterSide === 'ALL' || trade.side === filterSide;
                 const matchesSize = size >= minSize;
-                return matchesSide && matchesSize;
+                const matchesTracked = !showOnlyTracked || trackedWallets.has(trade.maker_address);
+                return matchesSide && matchesSize && matchesTracked;
             });
 
             setTrades(filtered);
@@ -44,7 +68,7 @@ export default function WhalesPage() {
 
     useEffect(() => {
         fetchData();
-    }, [filterSide, minSize]);
+    }, [filterSide, minSize, showOnlyTracked]);
 
     // Auto-refresh every 30 seconds
     useEffect(() => {
@@ -55,7 +79,7 @@ export default function WhalesPage() {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [autoRefresh, filterSide, minSize]);
+    }, [autoRefresh, filterSide, minSize, showOnlyTracked]);
 
     const formatTime = (timestamp: number) => {
         const date = new Date(timestamp * 1000);
@@ -70,15 +94,15 @@ export default function WhalesPage() {
     };
 
     return (
-        <div className="min-h-screen py-8">
+        <div className="min-h-screen py-8 bg-secondary">
             <div className="container mx-auto px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                        <h1 className="text-4xl font-bold text-primary mb-3">
                             Whale Tracker
                         </h1>
-                        <p className="text-lg text-gray-600 dark:text-gray-400">
+                        <p className="text-lg text-secondary">
                             Track large trades and smart money movements in real-time
                         </p>
                     </div>
@@ -86,42 +110,33 @@ export default function WhalesPage() {
                     {/* Controls */}
                     <div className="mb-8 flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <Filter size={18} className="text-gray-500" />
+                            <Filter size={18} className="text-secondary" />
                             <button
                                 onClick={() => setFilterSide('ALL')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterSide === 'ALL'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
-                                    }`}
+                                className={filterSide === 'ALL' ? 'btn-primary' : 'btn-outline'}
                             >
                                 All
                             </button>
                             <button
                                 onClick={() => setFilterSide('BUY')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterSide === 'BUY'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-green-300'
-                                    }`}
+                                className={filterSide === 'BUY' ? 'btn-success' : 'btn-outline'}
                             >
                                 Buys
                             </button>
                             <button
                                 onClick={() => setFilterSide('SELL')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterSide === 'SELL'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-red-300'
-                                    }`}
+                                className={filterSide === 'SELL' ? 'btn-danger' : 'btn-outline'}
                             >
                                 Sells
                             </button>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <label className="text-sm text-gray-600">Min Size:</label>
+                            <label className="text-sm text-secondary">Min Size:</label>
                             <select
                                 value={minSize}
                                 onChange={(e) => setMinSize(Number(e.target.value))}
-                                className="px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="px-3 py-2 rounded-lg border border-border bg-primary text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
                             >
                                 <option value={0}>All</option>
                                 <option value={100}>$100+</option>
@@ -131,8 +146,17 @@ export default function WhalesPage() {
                             </select>
                         </div>
 
+                        <button
+                            onClick={() => setShowOnlyTracked(!showOnlyTracked)}
+                            className={showOnlyTracked ? 'btn-primary' : 'btn-outline'}
+                            title="Show only tracked wallets"
+                        >
+                            <Star size={18} fill={showOnlyTracked ? "white" : "none"} />
+                            Tracked {trackedWallets.size > 0 && `(${trackedWallets.size})`}
+                        </button>
+
                         <div className="ml-auto flex items-center gap-4">
-                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                            <label className="flex items-center gap-2 text-sm text-secondary">
                                 <input
                                     type="checkbox"
                                     checked={autoRefresh}
@@ -153,7 +177,7 @@ export default function WhalesPage() {
 
                     {/* Error Message */}
                     {error && !loading && (
-                        <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-300">
+                        <div className="mb-8 p-4 bg-warning/10 border border-warning/30 rounded-lg text-warning">
                             {error}
                         </div>
                     )}
@@ -161,20 +185,20 @@ export default function WhalesPage() {
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-6 mb-8">
                         <div className="card text-center">
-                            <div className="text-3xl font-bold text-purple-600 mb-1">{trades.length}</div>
-                            <div className="text-sm text-gray-600">Recent Trades</div>
+                            <div className="text-3xl font-bold text-accent-primary mb-1">{trades.length}</div>
+                            <div className="text-sm text-secondary">Recent Trades</div>
                         </div>
                         <div className="card text-center">
-                            <div className="text-3xl font-bold text-green-600 mb-1">
+                            <div className="text-3xl font-bold text-success mb-1">
                                 {trades.filter(t => t.side === 'BUY').length}
                             </div>
-                            <div className="text-sm text-gray-600">Buys</div>
+                            <div className="text-sm text-secondary">Buys</div>
                         </div>
                         <div className="card text-center">
-                            <div className="text-3xl font-bold text-red-600 mb-1">
+                            <div className="text-3xl font-bold text-danger mb-1">
                                 {trades.filter(t => t.side === 'SELL').length}
                             </div>
-                            <div className="text-sm text-gray-600">Sells</div>
+                            <div className="text-sm text-secondary">Sells</div>
                         </div>
                     </div>
 
@@ -182,41 +206,44 @@ export default function WhalesPage() {
                     <div className="card overflow-hidden p-0">
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                <thead className="bg-tertiary border-b border-border">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
                                             Wallet
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
                                             Market
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
                                             Price
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
                                             Size
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
                                             Time
                                         </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Action
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
+                                            Side
+                                        </th>
+                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
+                                            Actions
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-border">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center">
+                                            <td colSpan={7} className="px-6 py-12 text-center">
                                                 <div className="flex flex-col items-center gap-3">
-                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                                                    <div className="text-gray-500 dark:text-gray-400">Loading whale activity...</div>
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary"></div>
+                                                    <div className="text-secondary">Loading whale activity...</div>
                                                 </div>
                                             </td>
                                         </tr>
                                     ) : trades.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                            <td colSpan={7} className="px-6 py-12 text-center text-secondary">
                                                 {error || 'No trades found matching your filters.'}
                                             </td>
                                         </tr>
@@ -231,47 +258,80 @@ export default function WhalesPage() {
                                             const value = size * price;
 
                                             return (
-                                                <tr key={trade.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                <tr key={trade.id} className="hover:bg-tertiary transition-colors">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                                                                <Wallet size={18} className="text-purple-600 dark:text-purple-400" />
+                                                            <div className="w-10 h-10 bg-accent-primary/10 rounded-lg flex items-center justify-center">
+                                                                <Wallet size={18} className="text-accent-primary" />
                                                             </div>
-                                                            <span className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                            <Link 
+                                                                href={`/wallet/${trade.maker_address}`}
+                                                                className="font-mono text-sm font-medium text-primary hover:text-accent-primary transition-colors"
+                                                            >
                                                                 {shortAddress}
-                                                            </span>
+                                                            </Link>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="max-w-xs">
-                                                            <div className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                                                            <div className="font-medium text-primary truncate text-sm">
                                                                 {trade.market || trade.asset_id}
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-900 dark:text-gray-100">
+                                                        <span className="text-sm text-primary">
                                                             ${price.toFixed(2)}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-1 text-gray-900 dark:text-gray-100 font-semibold">
+                                                        <div className="flex items-center gap-1 text-primary font-semibold">
                                                             <DollarSign size={14} />
                                                             {value.toFixed(0)}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                        <span className="text-sm text-secondary">
                                                             {formatTime(trade.timestamp)}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${trade.side === 'BUY'
-                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                            ? 'bg-success/10 text-success'
+                                                            : 'bg-danger/10 text-danger'
                                                             }`}>
                                                             {trade.side}
                                                         </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <Link
+                                                                href={`/wallet/${trade.maker_address}`}
+                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
+                                                                title="View wallet analytics"
+                                                            >
+                                                                <BarChart3 size={18} className="text-accent-primary" />
+                                                            </Link>
+                                                            <button
+                                                                onClick={() => toggleTrackWallet(trade.maker_address)}
+                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
+                                                                title={trackedWallets.has(trade.maker_address) ? "Untrack wallet" : "Track wallet"}
+                                                            >
+                                                                <Star
+                                                                    size={18}
+                                                                    className={trackedWallets.has(trade.maker_address) ? 'text-warning fill-warning' : 'text-secondary'}
+                                                                />
+                                                            </button>
+                                                            <a
+                                                                href={`https://polymarket.com/profile/${trade.maker_address}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
+                                                                title="View on Polymarket"
+                                                            >
+                                                                <ExternalLink size={18} className="text-accent-primary" />
+                                                            </a>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

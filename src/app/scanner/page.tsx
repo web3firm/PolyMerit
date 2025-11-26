@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Activity, Search, Tag as TagIcon, X } from 'lucide-react';
-import { Market, Tag } from '@/lib/polymarket';
+import { TrendingUp, Activity, Search, X, Brain } from 'lucide-react';
+import { Market } from '@/lib/polymarket';
 import MarketCard from '@/components/MarketCard';
 import SkeletonCard from '@/components/SkeletonCard';
+import AIInsights from '@/components/AIInsights';
 
 export default function ScannerPage() {
     const [markets, setMarkets] = useState<Market[]>([]);
@@ -14,24 +15,12 @@ export default function ScannerPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Market[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [tags, setTags] = useState<Tag[]>([]);
-    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [category, setCategory] = useState<string>('all');
+    const [minVolume, setMinVolume] = useState<number>(0);
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
-
-    // Fetch available tags
-    useEffect(() => {
-        async function fetchTags() {
-            try {
-                const response = await fetch('/api/tags');
-                const data = await response.json();
-                setTags(data.slice(0, 20)); // Show top 20 tags
-            } catch (error) {
-                console.error('Failed to fetch tags', error);
-            }
-        }
-        fetchTags();
-    }, []);
+    const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+    const [showAIInsights, setShowAIInsights] = useState(false);
 
     // Debounced search
     useEffect(() => {
@@ -89,28 +78,29 @@ export default function ScannerPage() {
         } finally {
             setLoading(false);
         }
-    }, [filter, selectedTag, offset]);
+    }, [filter, category, minVolume, offset]);
 
     useEffect(() => {
         fetchMarkets(true);
-    }, [filter, selectedTag]);
+    }, [filter, category, minVolume]);
 
-    useEffect(() => {
-        fetchMarkets(true);
-    }, [filter, selectedTag]);
-
-    const displayMarkets = searchQuery.trim() ? searchResults : markets;
+    const displayMarkets = searchQuery.trim() ? searchResults : markets.filter(m => {
+        const volume = parseFloat(m.volume || '0');
+        if (volume < minVolume) return false;
+        if (category === 'all') return true;
+        return m.category?.toLowerCase() === category;
+    });
 
     return (
-        <div className="min-h-screen py-8">
+        <div className="min-h-screen py-8 bg-secondary">
             <div className="container mx-auto px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                        <h1 className="text-4xl font-bold text-primary mb-3">
                             Market Scanner
                         </h1>
-                        <p className="text-lg text-gray-600 dark:text-gray-400">
+                        <p className="text-lg text-secondary">
                             Discover trending markets and new opportunities in real-time
                         </p>
                     </div>
@@ -118,25 +108,26 @@ export default function ScannerPage() {
                     {/* Search Bar */}
                     <div className="mb-6">
                         <div className="relative">
-                            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
                             <input
                                 type="text"
                                 placeholder="Search markets..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-12 pr-12 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                className="w-full pl-12 pr-12 py-3 bg-primary border border-primary rounded-xl text-primary"
+                                style={{ outline: 'none' }}
                             />
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-primary"
                                 >
                                     <X size={20} />
                                 </button>
                             )}
                             {isSearching && (
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
                                 </div>
                             )}
                         </div>
@@ -146,45 +137,57 @@ export default function ScannerPage() {
                     <div className="flex flex-wrap items-center gap-4 mb-8">
                         <div className="flex gap-2">
                             <button
-                                onClick={() => { setFilter('trending'); setSelectedTag(null); }}
-                                className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'trending' && !selectedTag
-                                    ? 'bg-purple-600 text-white shadow-md'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
-                                    }`}
+                                onClick={() => setFilter('trending')}
+                                className={filter === 'trending' ? 'btn-primary' : 'btn-outline'}
                             >
                                 <TrendingUp size={18} className="inline mr-2" />
                                 Trending
                             </button>
                             <button
-                                onClick={() => { setFilter('new'); setSelectedTag(null); }}
-                                className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'new' && !selectedTag
-                                    ? 'bg-purple-600 text-white shadow-md'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:border-purple-300'
-                                    }`}
+                                onClick={() => setFilter('new')}
+                                className={filter === 'new' ? 'btn-primary' : 'btn-outline'}
                             >
                                 <Activity size={18} className="inline mr-2" />
                                 New Markets
                             </button>
                         </div>
 
-                        {/* Tags Filter */}
-                        {tags.length > 0 && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <TagIcon size={18} className="text-gray-500" />
-                                {tags.slice(0, 8).map((tag) => (
-                                    <button
-                                        key={tag.id}
-                                        onClick={() => setSelectedTag(selectedTag === tag.id ? null : tag.id)}
-                                        className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${selectedTag === tag.id
-                                            ? 'bg-purple-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        {tag.label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {/* Category Filter */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-secondary">Category:</span>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="px-3 py-2 bg-primary border border-primary rounded-lg text-primary"
+                                style={{ outline: 'none' }}
+                            >
+                                <option value="all">All</option>
+                                <option value="politics">Politics</option>
+                                <option value="crypto">Crypto</option>
+                                <option value="sports">Sports</option>
+                                <option value="pop culture">Pop Culture</option>
+                                <option value="science">Science</option>
+                                <option value="business">Business</option>
+                            </select>
+                        </div>
+
+                        {/* Volume Filter */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-secondary">Min Volume:</span>
+                            <select
+                                value={minVolume}
+                                onChange={(e) => setMinVolume(Number(e.target.value))}
+                                className="px-3 py-2 bg-primary border border-primary rounded-lg text-primary"
+                                style={{ outline: 'none' }}
+                            >
+                                <option value={0}>All</option>
+                                <option value={10000}>$10K+</option>
+                                <option value={50000}>$50K+</option>
+                                <option value={100000}>$100K+</option>
+                                <option value={500000}>$500K+</option>
+                                <option value={1000000}>$1M+</option>
+                            </select>
+                        </div>
                     </div>
 
                     {searchQuery && (

@@ -16,6 +16,9 @@ interface MarketCardProps {
 export default function MarketCard({ title, volume, yesPrice, noPrice, isTrending, marketId, slug }: MarketCardProps) {
     const yesPercent = Math.round(yesPrice * 100);
     const noPercent = Math.round(noPrice * 100);
+    
+    // Use slug for internal routing to market detail page
+    const internalLink = slug ? `/market/${slug}` : null;
 
     const cardContent = (
         <div className="market-card h-full flex flex-col group relative overflow-hidden">
@@ -26,11 +29,11 @@ export default function MarketCard({ title, volume, yesPrice, noPrice, isTrendin
                 </div>
             )}
 
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2 mb-4 pr-16 leading-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+            <h3 className="text-lg font-bold text-primary line-clamp-2 mb-4 pr-16 leading-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                 {title}
             </h3>
 
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <div className="flex items-center gap-2 text-sm text-secondary mb-6">
                 <Activity size={14} className="text-purple-500" />
                 <span className="font-semibold">{volume}</span>
             </div>
@@ -38,20 +41,20 @@ export default function MarketCard({ title, volume, yesPrice, noPrice, isTrendin
             <div className="mt-auto space-y-4">
                 <div className="relative">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-bold text-green-600 dark:text-green-400">YES</span>
-                        <span className="text-lg font-black text-green-600 dark:text-green-400">{yesPercent}%</span>
+                        <span className="text-sm font-bold text-green-600">YES</span>
+                        <span className="text-lg font-black text-green-600">{yesPercent}%</span>
                     </div>
-                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                    <div className="h-3 bg-secondary rounded-full overflow-hidden shadow-inner">
                         <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500 shadow-lg" style={{ width: `${yesPercent}%` }} />
                     </div>
                 </div>
 
                 <div className="relative">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-bold text-red-600 dark:text-red-400">NO</span>
-                        <span className="text-lg font-black text-red-600 dark:text-red-400">{noPercent}%</span>
+                        <span className="text-sm font-bold text-red-600">NO</span>
+                        <span className="text-lg font-black text-red-600">{noPercent}%</span>
                     </div>
-                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                    <div className="h-3 bg-secondary rounded-full overflow-hidden shadow-inner">
                         <div className="h-full bg-gradient-to-r from-red-500 to-rose-500 rounded-full transition-all duration-500 shadow-lg" style={{ width: `${noPercent}%` }} />
                     </div>
                 </div>
@@ -65,12 +68,13 @@ export default function MarketCard({ title, volume, yesPrice, noPrice, isTrendin
         </div>
     );
 
-    if (marketId) {
-        return <Link href={`/market/${marketId}`} className="block">{cardContent}</Link>;
+    // Link to internal market detail page if slug available
+    if (internalLink) {
+        return <Link href={internalLink} className="block">{cardContent}</Link>;
     }
 
-    if (slug) {
-        return <a href={`https://polymarket.com/event/${slug}`} target="_blank" rel="noopener noreferrer" className="block">{cardContent}</a>;
+    if (marketId) {
+        return <Link href={`/market/${marketId}`} className="block">{cardContent}</Link>;
     }
 
     return <div className="block">{cardContent}</div>;
