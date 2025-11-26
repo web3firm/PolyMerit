@@ -19,7 +19,7 @@ export default function NavBar() {
     ];
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+        <nav className="sticky top-0 z-50 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
             <div className="container mx-auto px-6">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
@@ -31,7 +31,7 @@ export default function NavBar() {
                     </Link>
 
                     {/* Desktop Navigation Links */}
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden lg:flex items-center gap-8">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.href}
@@ -46,37 +46,29 @@ export default function NavBar() {
                         ))}
                     </div>
 
-                    {/* Desktop CTA Buttons */}
-                    <div className="hidden md:flex items-center gap-3">
-                        <button className="btn-ghost text-sm px-4 py-2">
-                            Sign In
-                        </button>
-                        <button className="btn-primary text-sm px-4 py-2">
-                            Get Started
+                    <div className="flex items-center gap-3">
+                        {/* Hamburger Button (always visible on right) */}
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className="p-2 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                            aria-label="Toggle menu"
+                        >
+                            {isMenuOpen ? (
+                                <X size={24} className="text-gray-900 dark:text-white" />
+                            ) : (
+                                <Menu size={24} className="text-gray-900 dark:text-white" />
+                            )}
                         </button>
                     </div>
-
-                    {/* Mobile Hamburger Button */}
-                    <button
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        aria-label="Toggle menu"
-                    >
-                        {isMenuOpen ? (
-                            <X size={24} className="text-gray-900 dark:text-white" />
-                        ) : (
-                            <Menu size={24} className="text-gray-900 dark:text-white" />
-                        )}
-                    </button>
                 </div>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Dropdown Menu */}
             {isMenuOpen && (
-                <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <div className="border-t border-gray-200/50 dark:border-gray-700/50 backdrop-blur-md">
                     <div className="container mx-auto px-6 py-4">
-                        {/* Mobile Navigation Links */}
-                        <div className="flex flex-col space-y-4 mb-6">
+                        {/* Navigation Links (mobile only) */}
+                        <div className="lg:hidden flex flex-col space-y-4 mb-6">
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.href}
@@ -92,31 +84,28 @@ export default function NavBar() {
                             ))}
                         </div>
 
-                        {/* Dark Mode Toggle */}
-                        <div className="flex items-center justify-between py-4 border-t border-gray-200 dark:border-gray-700">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Dark Mode
-                            </span>
+                        {/* Theme Toggle (always visible in dropdown) */}
+                        <div className="flex items-center justify-between py-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                            <div className="flex items-center gap-2">
+                                {theme === 'light' ? (
+                                    <Sun size={18} className="text-gray-700 dark:text-gray-300" />
+                                ) : (
+                                    <Moon size={18} className="text-gray-700 dark:text-gray-300" />
+                                )}
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+                                </span>
+                            </div>
                             <button
                                 onClick={toggleTheme}
                                 className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 bg-gray-200 dark:bg-purple-600"
-                                aria-label="Toggle dark mode"
+                                aria-label="Toggle theme"
                             >
                                 <span
                                     className={`inline-block w-4 h-4 transform transition-transform bg-white rounded-full ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
                                         }`}
                                 />
-                                <span className="sr-only">Toggle dark mode</span>
-                            </button>
-                        </div>
-
-                        {/* Mobile CTA Buttons */}
-                        <div className="flex flex-col gap-3 pt-4">
-                            <button className="btn-ghost text-sm px-4 py-2 w-full">
-                                Sign In
-                            </button>
-                            <button className="btn-primary text-sm px-4 py-2 w-full">
-                                Get Started
+                                <span className="sr-only">Toggle theme</span>
                             </button>
                         </div>
                     </div>

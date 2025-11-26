@@ -1,6 +1,6 @@
 'use client';
 
-import { TrendingUp, Activity } from 'lucide-react';
+import { TrendingUp, Activity, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 interface MarketCardProps {
@@ -9,65 +9,69 @@ interface MarketCardProps {
     yesPrice: number;
     noPrice: number;
     isTrending?: boolean;
+    marketId?: string;
+    slug?: string;
 }
 
-export default function MarketCard({ title, volume, yesPrice, noPrice, isTrending }: MarketCardProps) {
+export default function MarketCard({ title, volume, yesPrice, noPrice, isTrending, marketId, slug }: MarketCardProps) {
     const yesPercent = Math.round(yesPrice * 100);
     const noPercent = Math.round(noPrice * 100);
 
-    return (
-        <Link href="#" className="block group">
-            <div className="card h-full flex flex-col hover:shadow-xl transition-all">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-base font-semibold text-gray-900 line-clamp-2 flex-1 group-hover:text-purple-600 transition-colors">
-                        {title}
-                    </h3>
-                    {isTrending && (
-                        <div className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full flex items-center gap-1">
-                            <TrendingUp size={12} />
-                            HOT
-                        </div>
-                    )}
+    const cardContent = (
+        <div className="market-card h-full flex flex-col group relative overflow-hidden">
+            {isTrending && (
+                <div className="absolute top-4 right-4 px-2.5 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full flex items-center gap-1 z-10 shadow-lg">
+                    <TrendingUp size={12} />
+                    HOT
                 </div>
+            )}
 
-                {/* Volume */}
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                    <Activity size={14} />
-                    <span>Vol: {volume}</span>
-                </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2 mb-4 pr-16 leading-tight group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                {title}
+            </h3>
 
-                {/* Probability Bars */}
-                <div className="mt-auto space-y-3">
-                    {/* YES Bar */}
-                    <div className="relative">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-medium text-gray-700">YES</span>
-                            <span className="text-sm font-bold text-green-600">{yesPercent}%</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-green-500 rounded-full transition-all"
-                                style={{ width: `${yesPercent}%` }}
-                            />
-                        </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-6">
+                <Activity size={14} className="text-purple-500" />
+                <span className="font-semibold">{volume}</span>
+            </div>
+
+            <div className="mt-auto space-y-4">
+                <div className="relative">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-bold text-green-600 dark:text-green-400">YES</span>
+                        <span className="text-lg font-black text-green-600 dark:text-green-400">{yesPercent}%</span>
                     </div>
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500 shadow-lg" style={{ width: `${yesPercent}%` }} />
+                    </div>
+                </div>
 
-                    {/* NO Bar */}
-                    <div className="relative">
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-medium text-gray-700">NO</span>
-                            <span className="text-sm font-bold text-red-600">{noPercent}%</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-red-500 rounded-full transition-all"
-                                style={{ width: `${noPercent}%` }}
-                            />
-                        </div>
+                <div className="relative">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-bold text-red-600 dark:text-red-400">NO</span>
+                        <span className="text-lg font-black text-red-600 dark:text-red-400">{noPercent}%</span>
+                    </div>
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-full bg-gradient-to-r from-red-500 to-rose-500 rounded-full transition-all duration-500 shadow-lg" style={{ width: `${noPercent}%` }} />
                     </div>
                 </div>
             </div>
-        </Link>
+
+            {slug && (
+                <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ExternalLink size={16} className="text-purple-500" />
+                </div>
+            )}
+        </div>
     );
+
+    if (marketId) {
+        return <Link href={`/market/${marketId}`} className="block">{cardContent}</Link>;
+    }
+
+    if (slug) {
+        return <a href={`https://polymarket.com/event/${slug}`} target="_blank" rel="noopener noreferrer" className="block">{cardContent}</a>;
+    }
+
+    return <div className="block">{cardContent}</div>;
 }
