@@ -4,10 +4,29 @@ const BASE_URL = 'https://gamma-api.polymarket.com';
 export const getBuilderConfig = () => {
     return {
         builderAddress: process.env.NEXT_PUBLIC_BUILDER_ADDRESS,
+        builderName: process.env.NEXT_PUBLIC_BUILDER_NAME || 'polymerit',
         apiKey: process.env.POLYMARKET_API_KEY,
         secret: process.env.POLYMARKET_SECRET,
         passphrase: process.env.POLYMARKET_PASSPHRASE
     };
+};
+
+// Generate Polymarket URL with builder attribution
+export const getPolymarketURL = (path: string): string => {
+    const builderName = process.env.NEXT_PUBLIC_BUILDER_NAME || 'polymerit';
+    const url = new URL(path, 'https://polymarket.com');
+    url.searchParams.set('via', builderName);
+    return url.toString();
+};
+
+// Generate profile URL with attribution
+export const getProfileURL = (address: string): string => {
+    return getPolymarketURL(`/@${address}`);
+};
+
+// Generate event/market URL with attribution
+export const getEventURL = (slug: string): string => {
+    return getPolymarketURL(`/event/${slug}`);
 };
 
 // ============================================================================

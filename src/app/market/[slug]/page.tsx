@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Activity, ExternalLink, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { Market, PriceHistory, Trade } from '@/lib/polymarket';
+import { Market, PriceHistory, Trade, getEventURL } from '@/lib/polymarket';
 
 export default function MarketDetailPage() {
     const params = useParams();
@@ -126,7 +126,7 @@ export default function MarketDetailPage() {
                                 </div>
                             </div>
                             <a
-                                href={`https://polymarket.com/event/${market.slug}`}
+                                href={getEventURL(market.slug)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn-primary"

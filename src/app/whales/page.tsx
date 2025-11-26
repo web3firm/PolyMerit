@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Wallet, DollarSign, Filter, RefreshCw, Star, ExternalLink, TrendingUp, BarChart3 } from 'lucide-react';
-import { Trade } from '@/lib/polymarket';
+import { Trade, getProfileURL } from '@/lib/polymarket';
 import Link from 'next/link';
 
 export default function WhalesPage() {
@@ -323,7 +323,7 @@ export default function WhalesPage() {
                                                                 />
                                                             </button>
                                                             <a
-                                                                href={`https://polymarket.com/profile/${trade.maker_address}`}
+                                                                href={getProfileURL(trade.maker_address)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="p-2 hover:bg-tertiary rounded-lg transition-colors"

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Target, Award, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
-import { Trade } from '@/lib/polymarket';
+import { Trade, getProfileURL } from '@/lib/polymarket';
 
 interface WalletStats {
     totalTrades: number;
@@ -130,7 +130,7 @@ export default function WalletDetailPage() {
                                         {shortAddress}
                                     </code>
                                     <a
-                                        href={`https://polymarket.com/profile/${address}`}
+                                        href={getProfileURL(address)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-accent-primary hover:text-accent-hover transition-colors text-sm font-medium"

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Activity, Flame, DollarSign, ExternalLink } from 'lucide-react';
-import { Trade, Market, Event } from '@/lib/polymarket';
+import { Trade, Market, Event, getEventURL } from '@/lib/polymarket';
 import Link from 'next/link';
 
 interface FeedItem {
@@ -168,7 +168,7 @@ export default function LiveFeed() {
             </span>
           </div>
           <Link 
-            href={`https://polymarket.com/event/${event.slug}`}
+            href={getEventURL(event.slug)}
             target="_blank"
             className="text-sm text-primary truncate hover:text-accent flex items-center gap-1"
           >

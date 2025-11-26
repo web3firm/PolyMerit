@@ -2,6 +2,7 @@
 
 import { TrendingUp, Activity, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { getEventURL } from '@/lib/polymarket';
 
 interface MarketCardProps {
     title: string;
