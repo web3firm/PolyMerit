@@ -46,28 +46,41 @@ export default function NavBar() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Hamburger Button */}
+                        {/* Theme Toggle - Desktop Only */}
+                        <button
+                            onClick={toggleTheme}
+                            className="hidden lg:flex p-2 rounded-lg transition-colors btn-ghost"
+                            aria-label="Toggle theme"
+                        >
+                            {theme === 'light' ? (
+                                <Moon size={20} className="text-secondary" />
+                            ) : (
+                                <Sun size={20} className="text-secondary" />
+                            )}
+                        </button>
+
+                        {/* Hamburger Button - Mobile Only */}
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 rounded-lg transition-colors btn-ghost"
+                            className={`lg:hidden p-2 rounded-lg transition-all ${
+                                isMenuOpen 
+                                    ? 'bg-accent-primary/10 ring-2 ring-accent-primary/20' 
+                                    : 'btn-ghost'
+                            }`}
                             aria-label="Toggle menu"
                         >
-                            {isMenuOpen ? (
-                                <X size={24} className="text-primary" />
-                            ) : (
-                                <Menu size={24} className="text-primary" />
-                            )}
+                            <Menu size={24} className={isMenuOpen ? 'text-accent-primary' : 'text-primary'} />
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Dropdown Menu */}
+            {/* Mobile Dropdown Menu */}
             {isMenuOpen && (
-                <div className="border-t border-primary bg-primary">
+                <div className="lg:hidden border-t border-primary bg-primary">
                     <div className="container mx-auto px-6 py-4">
-                        {/* Navigation Links (mobile only) */}
-                        <div className="lg:hidden flex flex-col space-y-4 mb-6">
+                        {/* Navigation Links */}
+                        <div className="flex flex-col space-y-4 mb-6">
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.href}
@@ -109,7 +122,6 @@ export default function NavBar() {
                                         transform: theme === 'dark' ? 'translateX(24px)' : 'translateX(4px)'
                                     }}
                                 />
-                                <span className="sr-only">Toggle theme</span>
                             </button>
                         </div>
                     </div>
