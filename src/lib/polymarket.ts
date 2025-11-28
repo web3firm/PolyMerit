@@ -108,6 +108,29 @@ export interface Trade {
     outcome?: string;
 }
 
+// Real trade data from Polymarket Data API
+export interface RealTrade {
+    proxyWallet: string;
+    side: 'BUY' | 'SELL';
+    asset: string;
+    conditionId: string;
+    size: number;
+    price: number;
+    timestamp: number;
+    title: string;
+    slug: string;
+    icon?: string;
+    eventSlug: string;
+    outcome: string;
+    outcomeIndex: number;
+    name: string;
+    pseudonym: string;
+    bio?: string;
+    profileImage?: string;
+    profileImageOptimized?: string;
+    transactionHash: string;
+}
+
 export interface PriceHistory {
     t: number; // timestamp
     p: number; // price
@@ -390,62 +413,43 @@ export async function getTrades(conditionId: string, limit: number = 50): Promis
     }
 }
 
-export async function getGlobalActivity(limit: number = 50): Promise<Trade[]> {
+// Real trades from Polymarket Data API
+export async function getGlobalActivity(limit: number = 50): Promise<RealTrade[]> {
     try {
-        // Get active high-volume events
-        const events = await getEvents({ limit: 30, closed: false });
+        const response = await fetch(
+            `https://data-api.polymarket.com/trades?limit=${limit}`,
+            { cache: 'no-store' } // Always get fresh trade data
+        );
         
-        if (!events || events.length === 0) return [];
-        
-        // Generate realistic whale trades from top markets
-        const allTrades: Trade[] = [];
-        const now = Date.now();
-        
-        for (const event of events) {
-            if (!event.markets || event.markets.length === 0) continue;
-            
-            for (const market of event.markets) {
-                const volume = parseFloat(market.volume || '0');
-                
-                // Only create trades for markets with significant volume (>$50k)
-                if (volume > 50000) {
-                    // Generate 1-3 trades per high-volume market
-                    const numTrades = Math.min(3, Math.ceil(volume / 300000));
-                    
-                    for (let i = 0; i < numTrades; i++) {
-                        // Random wallet addresses
-                        const makerAddr = `0x${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}`;
-                        const takerAddr = `0x${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}`;
-                        
-                        // Random trade details
-                        const tradeSize = Math.floor(Math.random() * 45000) + 5000; // $5k-$50k
-                        const tradePrice = parseFloat((Math.random() * 0.7 + 0.15).toFixed(4)); // 0.15-0.85
-                        const side: 'BUY' | 'SELL' = Math.random() > 0.5 ? 'BUY' : 'SELL';
-                        const timeAgo = Math.floor(Math.random() * 7200000); // Random time in last 2 hours
-                        
-                        allTrades.push({
-                            id: `${market.conditionId}-${i}-${now}`,
-                            market: market.question,
-                            asset_id: market.conditionId,
-                            price: tradePrice.toString(),
-                            size: tradeSize.toString(),
-                            side: side,
-                            timestamp: now - timeAgo,
-                            maker_address: makerAddr,
-                            taker_address: takerAddr
-                        });
-                    }
-                }
-            }
+        if (!response.ok) {
+            console.error(`Trades API error: ${response.status} ${response.statusText}`);
+            return [];
         }
         
-        // Sort by timestamp (most recent first) and limit
-        return allTrades
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, limit);
-            
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
     } catch (error) {
-        console.error('Failed to fetch global activity:', error);
+        console.error('Failed to fetch global trades:', error);
+        return [];
+    }
+}
+
+// Get trades by specific user/wallet
+export async function getUserTrades(wallet: string, limit: number = 50): Promise<RealTrade[]> {
+    try {
+        const response = await fetch(
+            `https://data-api.polymarket.com/trades?user=${wallet}&limit=${limit}`,
+            { cache: 'no-store' }
+        );
+        
+        if (!response.ok) {
+            return [];
+        }
+        
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error('Failed to fetch user trades:', error);
         return [];
     }
 }

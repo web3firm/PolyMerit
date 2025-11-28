@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Target, Award, BarChart3 } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Target, Award, BarChart3, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { Trade, getProfileURL } from '@/lib/polymarket';
+import { RealTrade, getProfileURL, getUserTrades, getPolymarketURL } from '@/lib/polymarket';
 
 interface WalletStats {
     totalTrades: number;
@@ -13,59 +14,64 @@ interface WalletStats {
     buyTrades: number;
     sellTrades: number;
     uniqueMarkets: number;
-    estimatedPnL: number;
-    winRate: number;
+    buyVolume: number;
+    sellVolume: number;
+}
+
+interface TraderProfile {
+    name: string;
+    pseudonym: string;
+    bio?: string;
+    profileImage?: string;
 }
 
 export default function WalletDetailPage() {
     const params = useParams();
     const address = params.address as string;
-    const [trades, setTrades] = useState<Trade[]>([]);
+    const [trades, setTrades] = useState<RealTrade[]>([]);
     const [stats, setStats] = useState<WalletStats | null>(null);
+    const [profile, setProfile] = useState<TraderProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchWalletData = async () => {
             setLoading(true);
             try {
-                // Fetch all whale trades and filter for this wallet
-                const response = await fetch('/api/whales?limit=200');
-                const allTrades: Trade[] = await response.json();
-                
-                // Filter trades for this wallet
-                const walletTrades = allTrades.filter(
-                    t => t.maker_address.toLowerCase() === address.toLowerCase()
-                );
+                // Fetch trades directly for this wallet using the Data API
+                const response = await fetch(`https://data-api.polymarket.com/trades?user=${address}&limit=100`);
+                const walletTrades: RealTrade[] = response.ok ? await response.json() : [];
                 
                 setTrades(walletTrades);
                 
-                // Calculate statistics
+                // Extract profile from first trade
                 if (walletTrades.length > 0) {
-                    const totalVolume = walletTrades.reduce((sum, t) => {
-                        const size = parseFloat(t.size || '0');
-                        const price = parseFloat(t.price || '0');
-                        return sum + (size * price);
-                    }, 0);
-                    
-                    const buyTrades = walletTrades.filter(t => t.side === 'BUY').length;
-                    const sellTrades = walletTrades.filter(t => t.side === 'SELL').length;
-                    const uniqueMarkets = new Set(walletTrades.map(t => t.market || t.asset_id)).size;
-                    
-                    // Simplified PnL estimation (would need market outcomes for real calculation)
-                    const estimatedPnL = totalVolume * (Math.random() * 0.4 - 0.1); // -10% to +30% mock
-                    
-                    // Simplified win rate (would need outcome data)
-                    const winRate = 45 + Math.random() * 30; // 45-75% mock
+                    const firstTrade = walletTrades[0];
+                    setProfile({
+                        name: firstTrade.name,
+                        pseudonym: firstTrade.pseudonym,
+                        bio: firstTrade.bio,
+                        profileImage: firstTrade.profileImageOptimized || firstTrade.profileImage
+                    });
+                }
+                
+                // Calculate statistics from real data
+                if (walletTrades.length > 0) {
+                    const buyTrades = walletTrades.filter(t => t.side === 'BUY');
+                    const sellTrades = walletTrades.filter(t => t.side === 'SELL');
+                    const totalVolume = walletTrades.reduce((sum, t) => sum + t.size, 0);
+                    const buyVolume = buyTrades.reduce((sum, t) => sum + t.size, 0);
+                    const sellVolume = sellTrades.reduce((sum, t) => sum + t.size, 0);
+                    const uniqueMarkets = new Set(walletTrades.map(t => t.conditionId)).size;
                     
                     setStats({
                         totalTrades: walletTrades.length,
                         totalVolume,
                         avgTradeSize: totalVolume / walletTrades.length,
-                        buyTrades,
-                        sellTrades,
+                        buyTrades: buyTrades.length,
+                        sellTrades: sellTrades.length,
                         uniqueMarkets,
-                        estimatedPnL,
-                        winRate
+                        buyVolume,
+                        sellVolume
                     });
                 }
             } catch (error) {
@@ -83,6 +89,25 @@ export default function WalletDetailPage() {
     const shortAddress = address.length > 10
         ? `${address.slice(0, 6)}...${address.slice(-4)}`
         : address;
+    
+    const displayName = profile?.name || profile?.pseudonym || shortAddress;
+
+    const formatSize = (size: number) => {
+        if (size >= 1000000) return `$${(size / 1000000).toFixed(2)}M`;
+        if (size >= 1000) return `$${(size / 1000).toFixed(1)}K`;
+        return `$${size.toFixed(0)}`;
+    };
+
+    const formatTime = (timestamp: number) => {
+        const date = new Date(timestamp * 1000);
+        const now = new Date();
+        const diff = now.getTime() - date.getTime();
+        
+        if (diff < 60000) return 'Just now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+        return date.toLocaleDateString();
+    };
 
     if (loading) {
         return (
@@ -118,12 +143,24 @@ export default function WalletDetailPage() {
 
                     <div className="mb-8">
                         <div className="flex items-center gap-4 mb-3">
-                            <div className="w-16 h-16 bg-accent-primary/10 rounded-xl flex items-center justify-center">
-                                <Wallet size={32} className="text-accent-primary" />
-                            </div>
+                            {profile?.profileImage ? (
+                                <Image
+                                    src={profile.profileImage}
+                                    alt={displayName}
+                                    width={64}
+                                    height={64}
+                                    className="rounded-xl"
+                                />
+                            ) : (
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-white">
+                                        {displayName.slice(0, 2).toUpperCase()}
+                                    </span>
+                                </div>
+                            )}
                             <div>
                                 <h1 className="text-4xl font-bold text-primary mb-2">
-                                    Wallet Analytics
+                                    {displayName}
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <code className="text-lg text-secondary font-mono bg-tertiary px-3 py-1 rounded-lg">
@@ -133,11 +170,14 @@ export default function WalletDetailPage() {
                                         href={getProfileURL(address)}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-accent-primary hover:text-accent-hover transition-colors text-sm font-medium"
+                                        className="text-accent-primary hover:text-accent-hover transition-colors text-sm font-medium flex items-center gap-1"
                                     >
-                                        View on Polymarket →
+                                        View on Polymarket <ExternalLink size={14} />
                                     </a>
                                 </div>
+                                {profile?.bio && (
+                                    <p className="text-secondary mt-2 max-w-xl">{profile.bio}</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -164,42 +204,39 @@ export default function WalletDetailPage() {
                                 <div className="card text-center">
                                     <div className="text-sm text-secondary mb-2">Total Volume</div>
                                     <div className="text-3xl font-bold text-primary mb-1">
-                                        ${(stats.totalVolume / 1000).toFixed(1)}K
+                                        {formatSize(stats.totalVolume)}
                                     </div>
                                     <div className="text-xs text-secondary">
-                                        Avg: ${stats.avgTradeSize.toFixed(0)}
+                                        Avg: {formatSize(stats.avgTradeSize)}
                                     </div>
                                 </div>
 
                                 <div className="card text-center">
-                                    <div className="text-sm text-secondary mb-2">Est. PnL</div>
-                                    <div className={`text-3xl font-bold mb-1 ${stats.estimatedPnL >= 0 ? 'text-success' : 'text-danger'}`}>
-                                        {stats.estimatedPnL >= 0 ? '+' : ''}${(stats.estimatedPnL / 1000).toFixed(1)}K
+                                    <div className="text-sm text-secondary mb-2">Buy Volume</div>
+                                    <div className="text-3xl font-bold text-success mb-1">
+                                        {formatSize(stats.buyVolume)}
                                     </div>
-                                    <div className="flex items-center justify-center gap-1 text-xs text-secondary">
-                                        {stats.estimatedPnL >= 0 ? (
-                                            <TrendingUp size={14} className="text-success" />
-                                        ) : (
-                                            <TrendingDown size={14} className="text-danger" />
-                                        )}
-                                        {((stats.estimatedPnL / stats.totalVolume) * 100).toFixed(1)}% ROI
+                                    <div className="text-xs text-secondary flex items-center justify-center gap-1">
+                                        <TrendingUp size={14} className="text-success" />
+                                        {((stats.buyVolume / stats.totalVolume) * 100).toFixed(0)}% of total
                                     </div>
                                 </div>
 
                                 <div className="card text-center">
-                                    <div className="text-sm text-secondary mb-2">Win Rate</div>
-                                    <div className="text-3xl font-bold text-primary mb-1">
-                                        {stats.winRate.toFixed(0)}%
+                                    <div className="text-sm text-secondary mb-2">Sell Volume</div>
+                                    <div className="text-3xl font-bold text-danger mb-1">
+                                        {formatSize(stats.sellVolume)}
                                     </div>
-                                    <div className="text-xs text-secondary">
-                                        {stats.winRate >= 60 ? '🔥 Alpha Trader' : 'Estimated'}
+                                    <div className="text-xs text-secondary flex items-center justify-center gap-1">
+                                        <TrendingDown size={14} className="text-danger" />
+                                        {((stats.sellVolume / stats.totalVolume) * 100).toFixed(0)}% of total
                                     </div>
                                 </div>
                             </div>
 
                             {/* Performance Badges */}
                             <div className="card mb-8">
-                                <h2 className="text-xl font-bold text-primary mb-4">Performance</h2>
+                                <h2 className="text-xl font-bold text-primary mb-4">Trader Badges</h2>
                                 <div className="flex flex-wrap gap-3">
                                     {stats.totalVolume > 50000 && (
                                         <div className="badge-accent flex items-center gap-2">
@@ -207,10 +244,16 @@ export default function WalletDetailPage() {
                                             High Volume Trader
                                         </div>
                                     )}
-                                    {stats.winRate >= 60 && (
+                                    {stats.buyVolume > stats.sellVolume * 1.5 && (
                                         <div className="badge-accent flex items-center gap-2">
-                                            <Award size={14} />
-                                            Alpha Trader
+                                            <TrendingUp size={14} />
+                                            Bull
+                                        </div>
+                                    )}
+                                    {stats.sellVolume > stats.buyVolume * 1.5 && (
+                                        <div className="badge-accent flex items-center gap-2">
+                                            <TrendingDown size={14} />
+                                            Bear
                                         </div>
                                     )}
                                     {stats.uniqueMarkets >= 10 && (
@@ -223,6 +266,12 @@ export default function WalletDetailPage() {
                                         <div className="badge-accent flex items-center gap-2">
                                             <BarChart3 size={14} />
                                             Active Trader
+                                        </div>
+                                    )}
+                                    {stats.avgTradeSize > 1000 && (
+                                        <div className="badge-accent flex items-center gap-2">
+                                            <Award size={14} />
+                                            Big Player
                                         </div>
                                     )}
                                 </div>
@@ -269,12 +318,12 @@ export default function WalletDetailPage() {
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-secondary">Avg Trade Size</span>
-                                            <span className="text-xl font-bold text-primary">${stats.avgTradeSize.toFixed(0)}</span>
+                                            <span className="text-xl font-bold text-primary">{formatSize(stats.avgTradeSize)}</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-secondary">Largest Trade</span>
                                             <span className="text-xl font-bold text-primary">
-                                                ${Math.max(...trades.map(t => parseFloat(t.size || '0') * parseFloat(t.price || '0'))).toFixed(0)}
+                                                {formatSize(Math.max(...trades.map(t => t.size)))}
                                             </span>
                                         </div>
                                     </div>
@@ -292,44 +341,62 @@ export default function WalletDetailPage() {
                                             <tr>
                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Market</th>
                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Side</th>
+                                                <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Outcome</th>
                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Price</th>
                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Size</th>
                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">Time</th>
+                                                <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">TX</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
-                                            {trades.map((trade) => {
-                                                const size = parseFloat(trade.size || '0');
-                                                const price = parseFloat(trade.price || '0');
-                                                const value = size * price;
-                                                const timeAgo = Math.floor((Date.now() - trade.timestamp * 1000) / 60000);
-
-                                                return (
-                                                    <tr key={trade.id} className="hover:bg-tertiary transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            <div className="max-w-xs truncate text-sm text-primary">
-                                                                {trade.market || trade.asset_id}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                                trade.side === 'BUY' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-                                                            }`}>
-                                                                {trade.side}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-primary">
-                                                            ${price.toFixed(2)}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm font-semibold text-primary">
-                                                            ${value.toFixed(0)}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-secondary">
-                                                            {timeAgo < 60 ? `${timeAgo}m ago` : `${Math.floor(timeAgo / 60)}h ago`}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                            {trades.map((trade, index) => (
+                                                <tr key={`${trade.transactionHash}-${index}`} className="hover:bg-tertiary transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <Link
+                                                            href={getPolymarketURL(`/event/${trade.eventSlug}`)}
+                                                            target="_blank"
+                                                            className="max-w-xs truncate text-sm text-primary hover:text-accent-primary transition-colors block"
+                                                        >
+                                                            {trade.title}
+                                                        </Link>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                            trade.side === 'BUY' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                                                        }`}>
+                                                            {trade.side}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-sm font-medium ${
+                                                            trade.outcome?.toLowerCase() === 'yes' ? 'text-success' : 
+                                                            trade.outcome?.toLowerCase() === 'no' ? 'text-danger' : 
+                                                            'text-primary'
+                                                        }`}>
+                                                            {trade.outcome}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-primary">
+                                                        {(trade.price * 100).toFixed(1)}¢
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-semibold text-primary">
+                                                        {formatSize(trade.size)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-secondary">
+                                                        {formatTime(trade.timestamp)}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <a
+                                                            href={`https://polygonscan.com/tx/${trade.transactionHash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-accent-primary hover:text-accent-hover text-xs"
+                                                        >
+                                                            View ↗
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

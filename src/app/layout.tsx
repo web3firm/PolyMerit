@@ -3,6 +3,7 @@ import "./globals.css";
 import NavBar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "PolyMerit | Prediction Market Analytics",
@@ -17,13 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased transition-colors flex flex-col">
-        <ThemeProvider>
-          <NavBar />
-          <main className="flex-1 min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <NavBar />
+            <main className="flex-1 min-h-screen">
+              {children}
+            </main>
+            <Footer />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

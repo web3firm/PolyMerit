@@ -1,346 +1,285 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, DollarSign, Filter, RefreshCw, Star, ExternalLink, TrendingUp, BarChart3 } from 'lucide-react';
-import { Trade, getProfileURL } from '@/lib/polymarket';
 import Link from 'next/link';
+import Image from 'next/image';
+import { RealTrade, getPolymarketURL } from '@/lib/polymarket';
 
 export default function WhalesPage() {
-    const [trades, setTrades] = useState<Trade[]>([]);
+    const [trades, setTrades] = useState<RealTrade[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [filterSide, setFilterSide] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
     const [minSize, setMinSize] = useState<number>(100);
-    const [autoRefresh, setAutoRefresh] = useState(false);
-    const [trackedWallets, setTrackedWallets] = useState<Set<string>>(new Set());
-    const [showOnlyTracked, setShowOnlyTracked] = useState(false);
+    const [sideFilter, setSideFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
 
-    // Load tracked wallets from localStorage
     useEffect(() => {
-        const saved = localStorage.getItem('trackedWallets');
-        if (saved) {
-            setTrackedWallets(new Set(JSON.parse(saved)));
+        async function fetchTrades() {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/whales?limit=100');
+                if (!response.ok) throw new Error('Failed to fetch trades');
+                const data = await response.json();
+                setTrades(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load trades');
+            } finally {
+                setLoading(false);
+            }
         }
+
+        fetchTrades();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchTrades, 30000);
+        return () => clearInterval(interval);
     }, []);
 
-    // Save tracked wallets to localStorage
-    const toggleTrackWallet = (address: string) => {
-        const newTracked = new Set(trackedWallets);
-        if (newTracked.has(address)) {
-            newTracked.delete(address);
-        } else {
-            newTracked.add(address);
-        }
-        setTrackedWallets(newTracked);
-        localStorage.setItem('trackedWallets', JSON.stringify(Array.from(newTracked)));
-    };
-
-    const fetchData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch('/api/whales?limit=50');
-            const data: Trade[] = await response.json();
-
-            if (!data || data.length === 0) {
-                setError('No whale activity data available at the moment.');
-                setTrades([]);
-                return;
-            }
-
-            // Filter trades by minimum size and side
-            const filtered = data.filter(trade => {
-                const size = parseFloat(trade.size || '0');
-                const matchesSide = filterSide === 'ALL' || trade.side === filterSide;
-                const matchesSize = size >= minSize;
-                const matchesTracked = !showOnlyTracked || trackedWallets.has(trade.maker_address);
-                return matchesSide && matchesSize && matchesTracked;
-            });
-
-            setTrades(filtered);
-        } catch (error) {
-            console.error('Failed to fetch whale activity', error);
-            setError('Failed to load whale activity. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [filterSide, minSize, showOnlyTracked]);
-
-    // Auto-refresh every 30 seconds
-    useEffect(() => {
-        if (!autoRefresh) return;
-        
-        const interval = setInterval(() => {
-            fetchData();
-        }, 30000);
-
-        return () => clearInterval(interval);
-    }, [autoRefresh, filterSide, minSize, showOnlyTracked]);
+    const filteredTrades = trades.filter(trade => {
+        if (trade.size < minSize) return false;
+        if (sideFilter !== 'ALL' && trade.side !== sideFilter) return false;
+        return true;
+    });
 
     const formatTime = (timestamp: number) => {
+        // Polymarket uses Unix timestamp in seconds
         const date = new Date(timestamp * 1000);
         const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
+        const diff = now.getTime() - date.getTime();
         
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+        if (diff < 60000) return 'Just now';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
         return date.toLocaleDateString();
     };
 
+    const formatSize = (size: number) => {
+        if (size >= 1000000) return `$${(size / 1000000).toFixed(2)}M`;
+        if (size >= 1000) return `$${(size / 1000).toFixed(1)}K`;
+        return `$${size.toFixed(0)}`;
+    };
+
+    const getTraderName = (trade: RealTrade) => {
+        return trade.name || trade.pseudonym || `${trade.proxyWallet.slice(0, 6)}...${trade.proxyWallet.slice(-4)}`;
+    };
+
+    const stats = {
+        totalVolume: trades.reduce((sum, t) => sum + t.size, 0),
+        totalTrades: trades.length,
+        buyVolume: trades.filter(t => t.side === 'BUY').reduce((sum, t) => sum + t.size, 0),
+        sellVolume: trades.filter(t => t.side === 'SELL').reduce((sum, t) => sum + t.size, 0),
+        avgSize: trades.length > 0 ? trades.reduce((sum, t) => sum + t.size, 0) / trades.length : 0,
+        largestTrade: trades.length > 0 ? Math.max(...trades.map(t => t.size)) : 0,
+    };
+
     return (
-        <div className="min-h-screen py-8 bg-secondary">
-            <div className="container mx-auto px-6">
-                <div className="max-w-7xl mx-auto">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-primary mb-3">
-                            Whale Tracker
-                        </h1>
-                        <p className="text-lg text-secondary">
-                            Track large trades and smart money movements in real-time
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        🐋 Whale Tracker
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                        Real-time trades from Polymarket&apos;s most active traders
+                    </p>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Volume</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {formatSize(stats.totalVolume)}
                         </p>
                     </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Total Trades</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {stats.totalTrades}
+                        </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Buy / Sell</p>
+                        <p className="text-2xl font-bold">
+                            <span className="text-emerald-500">{formatSize(stats.buyVolume)}</span>
+                            <span className="text-gray-400 mx-1">/</span>
+                            <span className="text-red-500">{formatSize(stats.sellVolume)}</span>
+                        </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Largest Trade</p>
+                        <p className="text-2xl font-bold text-purple-500">
+                            {formatSize(stats.largestTrade)}
+                        </p>
+                    </div>
+                </div>
 
-                    {/* Controls */}
-                    <div className="mb-8 flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <Filter size={18} className="text-secondary" />
-                            <button
-                                onClick={() => setFilterSide('ALL')}
-                                className={filterSide === 'ALL' ? 'btn-primary' : 'btn-outline'}
-                            >
-                                All
-                            </button>
-                            <button
-                                onClick={() => setFilterSide('BUY')}
-                                className={filterSide === 'BUY' ? 'btn-success' : 'btn-outline'}
-                            >
-                                Buys
-                            </button>
-                            <button
-                                onClick={() => setFilterSide('SELL')}
-                                className={filterSide === 'SELL' ? 'btn-danger' : 'btn-outline'}
-                            >
-                                Sells
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm text-secondary">Min Size:</label>
-                            <select
-                                value={minSize}
-                                onChange={(e) => setMinSize(Number(e.target.value))}
-                                className="px-3 py-2 rounded-lg border border-border bg-primary text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                            >
-                                <option value={0}>All</option>
-                                <option value={100}>$100+</option>
-                                <option value={500}>$500+</option>
-                                <option value={1000}>$1,000+</option>
-                                <option value={5000}>$5,000+</option>
-                            </select>
-                        </div>
-
-                        <button
-                            onClick={() => setShowOnlyTracked(!showOnlyTracked)}
-                            className={showOnlyTracked ? 'btn-primary' : 'btn-outline'}
-                            title="Show only tracked wallets"
+                {/* Filters */}
+                <div className="flex flex-wrap gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Min Size:</label>
+                        <select
+                            value={minSize}
+                            onChange={(e) => setMinSize(Number(e.target.value))}
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm"
                         >
-                            <Star size={18} fill={showOnlyTracked ? "white" : "none"} />
-                            Tracked {trackedWallets.size > 0 && `(${trackedWallets.size})`}
-                        </button>
-
-                        <div className="ml-auto flex items-center gap-4">
-                            <label className="flex items-center gap-2 text-sm text-secondary">
-                                <input
-                                    type="checkbox"
-                                    checked={autoRefresh}
-                                    onChange={(e) => setAutoRefresh(e.target.checked)}
-                                    className="rounded"
-                                />
-                                Auto-refresh
-                            </label>
-                            <button
-                                onClick={fetchData}
-                                disabled={loading}
-                                className="btn-ghost px-3 py-2"
-                            >
-                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                            </button>
+                            <option value={0}>All</option>
+                            <option value={100}>$100+</option>
+                            <option value={500}>$500+</option>
+                            <option value={1000}>$1K+</option>
+                            <option value={5000}>$5K+</option>
+                            <option value={10000}>$10K+</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Side:</label>
+                        <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                            {(['ALL', 'BUY', 'SELL'] as const).map((side) => (
+                                <button
+                                    key={side}
+                                    onClick={() => setSideFilter(side)}
+                                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                                        sideFilter === side
+                                            ? side === 'BUY'
+                                                ? 'bg-emerald-500 text-white'
+                                                : side === 'SELL'
+                                                ? 'bg-red-500 text-white'
+                                                : 'bg-blue-500 text-white'
+                                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {side}
+                                </button>
+                            ))}
                         </div>
                     </div>
+                    <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                        Showing {filteredTrades.length} of {trades.length} trades
+                    </div>
+                </div>
 
-                    {/* Error Message */}
-                    {error && !loading && (
-                        <div className="mb-8 p-4 bg-warning/10 border border-warning/30 rounded-lg text-warning">
-                            {error}
+                {/* Trades List */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    {loading ? (
+                        <div className="p-8 text-center">
+                            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                            <p className="text-gray-500 dark:text-gray-400">Loading real trades...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="p-8 text-center">
+                            <p className="text-red-500 mb-2">❌ {error}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="text-blue-500 hover:underline"
+                            >
+                                Try again
+                            </button>
+                        </div>
+                    ) : filteredTrades.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                            No trades match your filters
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {filteredTrades.map((trade, index) => (
+                                <div
+                                    key={`${trade.transactionHash}-${index}`}
+                                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        {/* Trader Avatar */}
+                                        <Link 
+                                            href={`/wallet/${trade.proxyWallet}`}
+                                            className="flex-shrink-0"
+                                        >
+                                            {trade.profileImage || trade.profileImageOptimized ? (
+                                                <Image
+                                                    src={trade.profileImageOptimized || trade.profileImage || ''}
+                                                    alt={getTraderName(trade)}
+                                                    width={48}
+                                                    height={48}
+                                                    className="rounded-full"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                                    {getTraderName(trade).slice(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
+                                        </Link>
+
+                                        {/* Trade Details */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Link 
+                                                    href={`/wallet/${trade.proxyWallet}`}
+                                                    className="font-semibold text-gray-900 dark:text-white hover:text-blue-500 transition-colors"
+                                                >
+                                                    {getTraderName(trade)}
+                                                </Link>
+                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                                    trade.side === 'BUY'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                }`}>
+                                                    {trade.side}
+                                                </span>
+                                                <span className="text-gray-400 text-sm">
+                                                    {formatTime(trade.timestamp)}
+                                                </span>
+                                            </div>
+                                            
+                                            <Link
+                                                href={getPolymarketURL(`/event/${trade.eventSlug}`)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors line-clamp-1"
+                                            >
+                                                {trade.title}
+                                            </Link>
+
+                                            <div className="flex items-center gap-4 mt-2 text-sm">
+                                                <span className={`font-bold ${
+                                                    trade.outcome?.toLowerCase() === 'yes' ? 'text-emerald-500' : 
+                                                    trade.outcome?.toLowerCase() === 'no' ? 'text-red-500' : 
+                                                    'text-gray-600 dark:text-gray-400'
+                                                }`}>
+                                                    {trade.outcome}
+                                                </span>
+                                                <span className="text-gray-500 dark:text-gray-400">
+                                                    @ {(trade.price * 100).toFixed(1)}¢
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Trade Value */}
+                                        <div className="text-right">
+                                            <p className={`text-lg font-bold ${
+                                                trade.side === 'BUY' ? 'text-emerald-500' : 'text-red-500'
+                                            }`}>
+                                                {formatSize(trade.size)}
+                                            </p>
+                                            <a
+                                                href={`https://polygonscan.com/tx/${trade.transactionHash}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-blue-500 hover:underline"
+                                            >
+                                                View TX ↗
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
+                </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-6 mb-8">
-                        <div className="card text-center">
-                            <div className="text-3xl font-bold text-accent-primary mb-1">{trades.length}</div>
-                            <div className="text-sm text-secondary">Recent Trades</div>
-                        </div>
-                        <div className="card text-center">
-                            <div className="text-3xl font-bold text-success mb-1">
-                                {trades.filter(t => t.side === 'BUY').length}
-                            </div>
-                            <div className="text-sm text-secondary">Buys</div>
-                        </div>
-                        <div className="card text-center">
-                            <div className="text-3xl font-bold text-danger mb-1">
-                                {trades.filter(t => t.side === 'SELL').length}
-                            </div>
-                            <div className="text-sm text-secondary">Sells</div>
-                        </div>
-                    </div>
-
-                    {/* Table */}
-                    <div className="card overflow-hidden p-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-tertiary border-b border-border">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Wallet
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Market
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Price
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Size
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Time
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Side
-                                        </th>
-                                        <th className="px-6 py-4 text-left text-sm font-semibold text-secondary">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary"></div>
-                                                    <div className="text-secondary">Loading whale activity...</div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : trades.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-12 text-center text-secondary">
-                                                {error || 'No trades found matching your filters.'}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        trades.map((trade) => {
-                                            const shortAddress = trade.maker_address.length > 10
-                                                ? `${trade.maker_address.slice(0, 6)}...${trade.maker_address.slice(-4)}`
-                                                : trade.maker_address;
-                                            
-                                            const size = parseFloat(trade.size || '0');
-                                            const price = parseFloat(trade.price || '0');
-                                            const value = size * price;
-
-                                            return (
-                                                <tr key={trade.id} className="hover:bg-tertiary transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-accent-primary/10 rounded-lg flex items-center justify-center">
-                                                                <Wallet size={18} className="text-accent-primary" />
-                                                            </div>
-                                                            <Link 
-                                                                href={`/wallet/${trade.maker_address}`}
-                                                                className="font-mono text-sm font-medium text-primary hover:text-accent-primary transition-colors"
-                                                            >
-                                                                {shortAddress}
-                                                            </Link>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="max-w-xs">
-                                                            <div className="font-medium text-primary truncate text-sm">
-                                                                {trade.market || trade.asset_id}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-primary">
-                                                            ${price.toFixed(2)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-1 text-primary font-semibold">
-                                                            <DollarSign size={14} />
-                                                            {value.toFixed(0)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-secondary">
-                                                            {formatTime(trade.timestamp)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${trade.side === 'BUY'
-                                                            ? 'bg-success/10 text-success'
-                                                            : 'bg-danger/10 text-danger'
-                                                            }`}>
-                                                            {trade.side}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <Link
-                                                                href={`/wallet/${trade.maker_address}`}
-                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
-                                                                title="View wallet analytics"
-                                                            >
-                                                                <BarChart3 size={18} className="text-accent-primary" />
-                                                            </Link>
-                                                            <button
-                                                                onClick={() => toggleTrackWallet(trade.maker_address)}
-                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
-                                                                title={trackedWallets.has(trade.maker_address) ? "Untrack wallet" : "Track wallet"}
-                                                            >
-                                                                <Star
-                                                                    size={18}
-                                                                    className={trackedWallets.has(trade.maker_address) ? 'text-warning fill-warning' : 'text-secondary'}
-                                                                />
-                                                            </button>
-                                                            <a
-                                                                href={getProfileURL(trade.maker_address)}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="p-2 hover:bg-tertiary rounded-lg transition-colors"
-                                                                title="View on Polymarket"
-                                                            >
-                                                                <ExternalLink size={18} className="text-accent-primary" />
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                {/* Live indicator */}
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    Live data from Polymarket • Auto-refreshes every 30s
                 </div>
             </div>
         </div>
